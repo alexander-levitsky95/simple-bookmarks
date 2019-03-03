@@ -1,0 +1,54 @@
+<?php
+/**
+ * @file
+ * Module hooks implementations.
+ */
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\views\ViewExecutable;
+
+/**
+ * Implements hook_page_attachments()
+ */
+function simple_bookmarks_page_attachments(array &$page) {
+  $page['#attached']['library'][] = 'simple_bookmarks/simple_bookmarks';
+}
+
+/**
+ * Implements hook_views_query_alter()
+ */
+function simple_bookmarks_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+
+  if (isset($view->element['#display_id']) && isset($view->element['#name'])) {
+    $view_name = $view->element['#name'];
+    $display_id = $view->element['#display_id'];
+    if ($view_name == 'YOUR-VIEW-NAME' && $display_id == 'YOUR-BLOCK-ID') {
+      $cookies = \Drupal::request()->cookies->all();
+      $result_cookies = [];
+      foreach ($cookies as $key => $cookie) {
+        if (substr_count($key, 'visitor_bookmark_node_id') > 0 && $cookie != 'undefined') {
+          $result_cookies[] = $cookie;
+        }
+      }
+      if (empty($result_cookies)) {
+        $result_cookies[] = '-1';
+        $query->addWhere('2', 'node_field_data.nid', $result_cookies[0], '=');
+        $query->group_operator = 'OR';
+      } else {
+        foreach ($result_cookies as $node_id_initial) {
+          $node_id_string_json = preg_replace("/[\[\]]+/", "", $node_id_initial);
+          $node_id_array_json = explode(",", $node_id_string_json);
+          foreach ($node_id_array_json as $node_id) {
+            $node_id = json_decode($node_id);
+            if (isset($node_id->node_id)) {
+              $query->addWhere('2', 'node_field_data.nid', $node_id->node_id, '=');
+              $query->group_operator = 'OR';
+            } else {
+              $query->addWhere('2', 'node_field_data.nid', '-1', '=');
+              $query->group_operator = 'OR';
+            }
+          }
+        }
+      }
+    }
+  }
+}

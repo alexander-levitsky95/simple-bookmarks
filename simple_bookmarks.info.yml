@@ -1,0 +1,6 @@
+name: 'Simple Custom Bookmarks'
+description: 'Create Bookmark for nodes'
+type: module
+core: 8.x
+dependences:
+  - field
